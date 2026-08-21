@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -9,38 +9,79 @@ const client = new Client({
   ]
 });
 
-client.once('ready', () => {
-  console.log(`Eclipse Bot Online Hai! Logged in as ${client.user.tag}`);
+// सिर्फ म्यूजिक कमांड्स
+const commands = [
+  new SlashCommandBuilder().setName('play').setDescription('VC me gaana chalao').addStringOption(option => 
+    option.setName('song').setDescription('Gaane ka naam ya link').setRequired(true)),
+  new SlashCommandBuilder().setName('pause').setDescription('Gaana pause karo'),
+  new SlashCommandBuilder().setName('resume').setDescription('Gaana resume karo'),
+  new SlashCommandBuilder().setName('skip').setDescription('Agla gaana chalao'),
+  new SlashCommandBuilder().setName('stop').setDescription('Music band karke VC chhodo'),
+  new SlashCommandBuilder().setName('help').setDescription('E-SONIC ke sare music commands dekho')
+].map(command => command.toJSON());
+
+// Slash Commands Register karna
+client.once('ready', async () => {
+  console.log(`E-SONIC Online Hai! Logged in as ${client.user.tag}`);
+  
+  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+  try {
+    console.log('Registering E-SONIC Music Commands...');
+    await rest.put(
+      Routes.applicationCommands(client.user.id),
+      { body: commands },
+    );
+    console.log('E-SONIC Pure Music Commands Active!');
+  } catch (error) {
+    console.error(error);
+  }
 });
 
-client.on('messageCreate', (message) => {
-  if (message.author.bot) return;
+// Command System
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
 
-  // !help कमांड
-  if (message.content === '!help') {
-    message.reply('**🌸 Eclipse Bot Commands:**\n• `!play <song>` - Gaana chalao\n• `!skip` - Agla gaana\n• `!stop` - Music band karo\n• `!ping` - Bot speed check karo');
+  const { commandName } = interaction;
+
+  // Help Command
+  if (commandName === 'help') {
+    const helpEmbed = new EmbedBuilder()
+      .setColor('#FFB6C1')
+      .setTitle('🌸 E - SONIC | Music Commands')
+      .setDescription('**Pure High-Quality Music System**\n\n• `/play <song>` - VC me gaana chalaye\n• `/pause` - Gaana roke\n• `/resume` - Gaana firse chalaye\n• `/skip` - Agla gaana skip kare\n• `/stop` - VC chhod de');
+    
+    await interaction.reply({ embeds: [helpEmbed] });
   }
 
-  // !ping कमांड
-  if (message.content === '!ping') {
-    message.reply('Pong! 🏓 Bot mst chal raha hai!');
+  // Play Command
+  else if (commandName === 'play') {
+    const voiceChannel = interaction.member.voice.channel;
+    if (!voiceChannel) {
+      return await interaction.reply({ content: '❌ Pehle kisi Voice Channel (VC) me join ho jao!', ephemeral: true });
+    }
+    
+    const song = interaction.options.getString('song');
+    await interaction.reply(`🎶 **E-SONIC Playing:** \`${song}\` in **${voiceChannel.name}** 🎧`);
   }
 
-  // !play कमांड
-  if (message.content.startsWith('!play')) {
-    const song = message.content.split(' ').slice(1).join(' ');
-    if (!song) return message.reply('Bhai gaane ka naam bhi likho!');
-    message.reply(`🎶 **Playing:** ${song}`);
+  // Pause Command
+  else if (commandName === 'pause') {
+    await interaction.reply('⏸️ Gaana pause kar diya gaya hai!');
   }
 
-  // !skip कमांड
-  if (message.content === '!skip') {
-    message.reply('⏭️ Gaana skip kar diya gaya hai!');
+  // Resume Command
+  else if (commandName === 'resume') {
+    await interaction.reply('▶️ Gaana firse start ho gaya hai!');
   }
 
-  // !stop कमांड
-  if (message.content === '!stop') {
-    message.reply('⏹️ Music stop ho gaya hai.');
+  // Skip Command
+  else if (commandName === 'skip') {
+    await interaction.reply('⏭️ Agla gaana skip kar diya gaya hai!');
+  }
+
+  // Stop Command
+  else if (commandName === 'stop') {
+    await interaction.reply('⏹️ Music stop ho gaya aur E-SONIC VC se nikal gaya.');
   }
 });
 
